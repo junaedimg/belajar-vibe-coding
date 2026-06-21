@@ -57,3 +57,30 @@ export const loginUser = async (payload: any) => {
 
   return { data: token };
 };
+
+export const getCurrentUser = async (token: string) => {
+  if (!token) {
+    throw new Error("Unauthorized");
+  }
+
+  const existingSession = await db.select().from(sessions).where(eq(sessions.token, token)).limit(1);
+
+  if (existingSession.length === 0) {
+    throw new Error("Unauthorized");
+  }
+
+  const session = existingSession[0];
+
+  const existingUser = await db.select({
+    id: users.id,
+    name: users.name,
+    email: users.email,
+    createdAt: users.createdAt,
+  }).from(users).where(eq(users.id, session.userId as number)).limit(1);
+
+  if (existingUser.length === 0) {
+    throw new Error("Unauthorized");
+  }
+
+  return { data: existingUser[0] };
+};
