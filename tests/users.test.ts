@@ -90,7 +90,7 @@ describe("User API Unit Tests", () => {
         })
       );
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(422);
     });
   });
 
