@@ -1,9 +1,21 @@
 import { Elysia } from "elysia";
+import { swagger } from "@elysiajs/swagger";
 import { db } from "./db";
 import { users } from "./db/schema";
 import { usersRoute } from "./routes/users-route";
 
 const app = new Elysia()
+  .use(
+    swagger({
+      documentation: {
+        info: {
+          title: "Dokumentasi API Belajar Vibe Coding",
+          version: "1.0.0",
+          description: "API untuk manajemen autentikasi pengguna",
+        },
+      },
+    })
+  )
   .use(usersRoute)
   .get("/", () => ({
     status: "ok",

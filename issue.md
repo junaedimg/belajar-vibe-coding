@@ -1,36 +1,79 @@
-# Task: Implementasi Unit Test API Menggunakan Bun Test
+# Task: Penambahan Fitur Dokumentasi API (Swagger UI)
 
 ## Deskripsi
-Implementasikan unit test secara menyeluruh untuk semua endpoint API yang telah tersedia saat ini. Pengujian harus menggunakan fitur bawaan `bun test` dan semua file test harus disimpan di dalam folder `tests/`.
+Tugas ini bertujuan untuk menambahkan antarmuka dokumentasi Swagger UI ke dalam aplikasi. Dengan adanya dokumentasi Swagger, pengguna (seperti tim *frontend* atau pihak *mobile*) dapat dengan mudah menjelajahi spesifikasi API, melihat format data payload yang dibutuhkan, dan menguji langsung endpoint API melalui browser.
 
-## Persyaratan Teknis Utama
-1. **Konsistensi Data:** **WAJIB** menghapus data di database pada setiap awal atau akhir skenario pengujian (misalnya menggunakan blok `beforeEach` atau `afterEach`). Hal ini penting agar satu test tidak mempengaruhi test lainnya.
-2. **Framework:** Menggunakan `bun test`.
-3. **Lokasi Penyimpanan:** Letakkan seluruh file test di dalam folder `tests/` (misalnya `tests/users.test.ts`).
+Proyek ini dibangun menggunakan **ElysiaJS**. Oleh karena itu, kita akan memanfaatkan *plugin* resmi bawaan Elysia untuk Swagger.
 
-## Skenario Pengujian yang Harus Diimplementasikan
+## Target Implementator
+Tugas ini dirancang untuk diselesaikan oleh *junior programmer* atau *AI model*. Silakan baca tahapan detail berikut secara berurutan dan terapkan satu per satu.
 
-Berikut adalah daftar API beserta skenario pengujian yang wajib di-cover:
+## Tahapan Implementasi Detail
 
-### 1. API Register User (`POST /api/users`)
-- [ ] **Skenario Sukses:** Sistem berhasil mendaftarkan pengguna baru saat diberikan data yang valid (respons mengembalikan data user yang didaftarkan tanpa menampilkan password).
-- [ ] **Skenario Gagal (Email Duplikat):** Sistem menolak pendaftaran dan mengembalikan error ketika pengguna mencoba mendaftar menggunakan email yang sudah ada di database.
-- [ ] **Skenario Gagal (Validasi Data):** Sistem menolak pendaftaran ketika dikirim payload yang tidak lengkap (misal: password kosong atau email format tidak valid).
+### Langkah 1: Instalasi Dependency Plugin
+Kita membutuhkan _package_ resmi dari ekosistem Elysia untuk meng-generate halaman Swagger.
+- Buka terminal/konsol Anda di direktori proyek (`belajar-vibe-coding`).
+- Jalankan perintah instalasi berikut:
+  ```bash
+  bun add @elysiajs/swagger
+  ```
 
-### 2. API Login User (`POST /api/users/login`)
-- [ ] **Skenario Sukses:** Sistem mengizinkan pengguna untuk masuk dan mengembalikan sebuah token autentikasi ketika email dan password cocok.
-- [ ] **Skenario Gagal (Password Salah):** Sistem menolak akses dan mengembalikan error (401 Unauthorized) ketika password salah.
-- [ ] **Skenario Gagal (Email Tidak Terdaftar):** Sistem menolak akses ketika email tidak ditemukan di database.
-- [ ] **Skenario Gagal (Validasi Data):** Sistem menolak login jika tidak ada email atau password yang disertakan pada request.
+### Langkah 2: Registrasi Plugin di Entry Point (`src/index.ts`)
+Plugin yang baru diinstal harus disisipkan ke *instance* utama aplikasi.
+1. Buka file `src/index.ts`.
+2. Tambahkan baris impor berikut di bagian atas file:
+   ```typescript
+   import { swagger } from '@elysiajs/swagger';
+   ```
+3. Sisipkan pemanggilan `.use(swagger(...))` pada saat inisiasi `app`, **sebelum** registrasi *routes* lainnya (misalnya sebelum `.use(usersRoute)`). Anda juga dapat menambahkan deskripsi singkat API seperti ini:
+   ```typescript
+   const app = new Elysia()
+     .use(swagger({
+       documentation: {
+         info: {
+           title: 'Dokumentasi API Belajar Vibe Coding',
+           version: '1.0.0',
+           description: 'API untuk manajemen autentikasi pengguna'
+         }
+       }
+     }))
+     .use(usersRoute)
+     // ... rute lainnya
+   ```
 
-### 3. API Get Current User (`GET /api/users/current`)
-- [ ] **Skenario Sukses:** Sistem berhasil mengembalikan data pengguna login saat ini dengan header `Authorization: Bearer <token>` yang valid.
-- [ ] **Skenario Gagal (Token Tidak Valid):** Sistem mengembalikan error 401 Unauthorized ketika dikirimkan token yang salah, sembarang, atau sudah dicabut.
-- [ ] **Skenario Gagal (Header Kosong):** Sistem menolak akses jika request sama sekali tidak menyertakan header `Authorization`.
+### Langkah 3: Penambahan Skema Validasi di Routes (`src/routes/users-route.ts`)
+Agar Swagger UI mengetahui data apa yang harus dikirim (*Request Body / Headers*) dan apa yang dikembalikan (*Response*), Anda harus mendeklarasikan **skema validasi** menggunakan fitur TypeBox yang terintegrasi (yaitu `t` dari `elysia`).
+1. Buka file `src/routes/users-route.ts`.
+2. Update impor Elysia menjadi: `import { Elysia, t } from "elysia";`
+3. Tambahkan konfigurasi skema sebagai **argumen ketiga** pada masing-masing rute.
+   - **Contoh untuk Endpoint Register (`POST /api/users`)**:
+     ```typescript
+     .post("/api/users", async ({ body, set }: any) => {
+         // ... kode yang sudah ada ...
+     }, {
+         body: t.Object({
+             name: t.String(),
+             email: t.String({ format: 'email' }),
+             password: t.String()
+         }),
+         detail: {
+             summary: "Registrasi Pengguna Baru",
+             tags: ["Auth"]
+         }
+     })
+     ```
+4. Lakukan modifikasi serupa untuk 3 _endpoint_ lainnya:
+   - **Login (`POST /api/users/login`)**: Definisikan `body` berupa objek berisi `email` dan `password`.
+   - **Get Current User (`GET /api/users/current`)**: Definisikan validasi `headers` untuk menangkap tipe string properti `authorization`.
+   - **Logout User (`DELETE /api/users/logout`)**: Sama seperti endpoint di atas, butuh deskripsi parameter `headers.authorization`.
 
-### 4. API Logout User (`DELETE /api/users/logout` - opsional jika telah di-merge)
-- [ ] **Skenario Sukses:** Sistem berhasil menghapus sesi dari database saat diberikan token yang valid.
-- [ ] **Skenario Gagal (Token Tidak Valid):** Sistem menolak proses logout ketika token salah atau kosong.
+*(Catatan: Jangan mengubah isi logika kode yang ada di dalam `{ body, set } => { ... }`, Anda murni hanya menambahkan skema konfigurasi pada parameter setelahnya).*
 
-## Catatan untuk Implementator
-Tugas Anda adalah menulis kode unit test-nya saja berdasarkan skenario di atas tanpa perlu diinstruksikan baris per baris. Tentukan sendiri cara spesifik memanggil endpoint, mereset database (menggunakan Drizzle), serta _assertion_ (`expect()`) yang paling relevan untuk mengevaluasi apakah API berjalan sesuai skenario.
+### Langkah 4: Verifikasi & Testing
+1. Jalankan server aplikasi dengan perintah:
+   ```bash
+   bun run dev
+   ```
+2. Buka browser dan arahkan ke alamat URL berikut: `http://localhost:3000/swagger`.
+3. Pastikan antarmuka grafis Swagger UI berhasil dimuat dan seluruh ke-4 rute (Register, Login, Current, Logout) muncul dengan tag `Auth`.
+4. Jalankan perintah `bun test` untuk memastikan perubahan konfigurasi rute yang Anda lakukan tidak merusak pengujian (*unit tests*) yang sudah ada.

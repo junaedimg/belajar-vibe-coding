@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import { registerUser, loginUser, getCurrentUser, logoutUser } from "../services/users-service";
 
 export const usersRoute = new Elysia()
@@ -12,6 +12,16 @@ export const usersRoute = new Elysia()
         error: error.message || "Email sudah terdaftar",
       };
     }
+  }, {
+    body: t.Object({
+      name: t.String(),
+      email: t.String({ format: "email" }),
+      password: t.String()
+    }),
+    detail: {
+      summary: "Register pengguna baru",
+      tags: ["Auth"]
+    }
   })
   .post("/api/users/login", async ({ body, set }: any) => {
     try {
@@ -22,6 +32,15 @@ export const usersRoute = new Elysia()
       return {
         error: error.message || "Email atau password salah",
       };
+    }
+  }, {
+    body: t.Object({
+      email: t.String({ format: "email" }),
+      password: t.String()
+    }),
+    detail: {
+      summary: "Login pengguna",
+      tags: ["Auth"]
     }
   })
   .derive(({ headers }: any) => {
@@ -42,6 +61,14 @@ export const usersRoute = new Elysia()
         error: "Unauthorized",
       };
     }
+  }, {
+    headers: t.Object({
+      authorization: t.Optional(t.String())
+    }),
+    detail: {
+      summary: "Mendapatkan informasi pengguna saat ini",
+      tags: ["Auth"]
+    }
   })
   .delete("/api/users/logout", async ({ tokenUser, set }: any) => {
     try {
@@ -55,5 +82,13 @@ export const usersRoute = new Elysia()
       return {
         error: "Unauthorized",
       };
+    }
+  }, {
+    headers: t.Object({
+      authorization: t.Optional(t.String())
+    }),
+    detail: {
+      summary: "Mengakhiri sesi pengguna",
+      tags: ["Auth"]
     }
   });
